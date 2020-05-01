@@ -1,4 +1,4 @@
-module golang.org/x/crypto
+modulegithub.com/glencircle/crypto
 
 go 1.11
 
