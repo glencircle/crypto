@@ -34,8 +34,8 @@ const (
 	kexAlgoDHGEXSHA256 = "diffie-hellman-group-exchange-sha256"
 )
 
-// kexResult captures the outcome of a key exchange.
-type kexResult struct {
+// KexResult captures the outcome of a key exchange.
+type KexResult struct {
 	// Session hash. See also RFC 4253, section 8.
 	H []byte
 
@@ -58,44 +58,44 @@ type kexResult struct {
 	SessionID []byte
 }
 
-// handshakeMagics contains data that is always included in the
+// HandshakeMagics contains data that is always included in the
 // session hash.
-type handshakeMagics struct {
+type HandshakeMagics struct {
 	clientVersion, serverVersion []byte
 	clientKexInit, serverKexInit []byte
 }
 
-func (m *handshakeMagics) write(w io.Writer) {
+func (m *HandshakeMagics) write(w io.Writer) {
 	writeString(w, m.clientVersion)
 	writeString(w, m.serverVersion)
 	writeString(w, m.clientKexInit)
 	writeString(w, m.serverKexInit)
 }
 
-// kexAlgorithm abstracts different key exchange algorithms.
-type kexAlgorithm interface {
+// KexAlgorithm abstracts different key exchange algorithms.
+type KexAlgorithm interface {
 	// Server runs server-side key agreement, signing the result
 	// with a hostkey.
-	Server(p packetConn, rand io.Reader, magics *handshakeMagics, s Signer) (*kexResult, error)
+	Server(p packetConn, rand io.Reader, magics *HandshakeMagics, s Signer) (*KexResult, error)
 
 	// Client runs the client-side key agreement. Caller is
 	// responsible for verifying the host key signature.
-	Client(p packetConn, rand io.Reader, magics *handshakeMagics) (*kexResult, error)
+	Client(p packetConn, rand io.Reader, magics *HandshakeMagics) (*KexResult, error)
 }
 
-// dhGroup is a multiplicative group suitable for implementing Diffie-Hellman key agreement.
-type dhGroup struct {
+// DHGroup is a multiplicative group suitable for implementing Diffie-Hellman key agreement.
+type DHGroup struct {
 	g, p, pMinus1 *big.Int
 }
 
-func (group *dhGroup) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
+func (group *DHGroup) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, error) {
 	if theirPublic.Cmp(bigOne) <= 0 || theirPublic.Cmp(group.pMinus1) >= 0 {
 		return nil, errors.New("ssh: DH parameter out of bounds")
 	}
 	return new(big.Int).Exp(theirPublic, myPrivate, group.p), nil
 }
 
-func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handshakeMagics) (*kexResult, error) {
+func (group *DHGroup) Client(c packetConn, randSource io.Reader, magics *HandshakeMagics) (*KexResult, error) {
 	hashFunc := crypto.SHA1
 
 	var x *big.Int
@@ -141,7 +141,7 @@ func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handsha
 	marshalInt(K, ki)
 	h.Write(K)
 
-	return &kexResult{
+	return &KexResult{
 		H:         h.Sum(nil),
 		K:         K,
 		HostKey:   kexDHReply.HostKey,
@@ -150,7 +150,7 @@ func (group *dhGroup) Client(c packetConn, randSource io.Reader, magics *handsha
 	}, nil
 }
 
-func (group *dhGroup) Server(c packetConn, randSource io.Reader, magics *handshakeMagics, priv Signer) (result *kexResult, err error) {
+func (group *DHGroup) Server(c packetConn, randSource io.Reader, magics *HandshakeMagics, priv Signer) (result *KexResult, err error) {
 	hashFunc := crypto.SHA1
 	packet, err := c.readPacket()
 	if err != nil {
@@ -206,7 +206,7 @@ func (group *dhGroup) Server(c packetConn, randSource io.Reader, magics *handsha
 	packet = Marshal(&kexDHReply)
 
 	err = c.writePacket(packet)
-	return &kexResult{
+	return &KexResult{
 		H:         H,
 		K:         K,
 		HostKey:   hostKeyBytes,
@@ -221,7 +221,7 @@ type ecdh struct {
 	curve elliptic.Curve
 }
 
-func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (*kexResult, error) {
+func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *HandshakeMagics) (*KexResult, error) {
 	ephKey, err := ecdsa.GenerateKey(kex.curve, rand)
 	if err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (kex *ecdh) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (
 	marshalInt(K, secret)
 	h.Write(K)
 
-	return &kexResult{
+	return &KexResult{
 		H:         h.Sum(nil),
 		K:         K,
 		HostKey:   reply.HostKey,
@@ -314,7 +314,7 @@ func validateECPublicKey(curve elliptic.Curve, x, y *big.Int) bool {
 	return true
 }
 
-func (kex *ecdh) Server(c packetConn, rand io.Reader, magics *handshakeMagics, priv Signer) (result *kexResult, err error) {
+func (kex *ecdh) Server(c packetConn, rand io.Reader, magics *HandshakeMagics, priv Signer) (result *KexResult, err error) {
 	packet, err := c.readPacket()
 	if err != nil {
 		return nil, err
@@ -375,7 +375,7 @@ func (kex *ecdh) Server(c packetConn, rand io.Reader, magics *handshakeMagics, p
 		return nil, err
 	}
 
-	return &kexResult{
+	return &KexResult{
 		H:         H,
 		K:         K,
 		HostKey:   reply.HostKey,
@@ -384,13 +384,13 @@ func (kex *ecdh) Server(c packetConn, rand io.Reader, magics *handshakeMagics, p
 	}, nil
 }
 
-var kexAlgoMap = map[string]kexAlgorithm{}
+var kexAlgoMap = map[string]KexAlgorithm{}
 
 func init() {
 	// This is the group called diffie-hellman-group1-sha1 in RFC
 	// 4253 and Oakley Group 2 in RFC 2409.
 	p, _ := new(big.Int).SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381FFFFFFFFFFFFFFFF", 16)
-	kexAlgoMap[kexAlgoDH1SHA1] = &dhGroup{
+	kexAlgoMap[kexAlgoDH1SHA1] = &DHGroup{
 		g:       new(big.Int).SetInt64(2),
 		p:       p,
 		pMinus1: new(big.Int).Sub(p, bigOne),
@@ -400,7 +400,7 @@ func init() {
 	// 4253 and Oakley Group 14 in RFC 3526.
 	p, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA051015728E5A8AACAA68FFFFFFFFFFFFFFFF", 16)
 
-	kexAlgoMap[kexAlgoDH14SHA1] = &dhGroup{
+	kexAlgoMap[kexAlgoDH14SHA1] = &DHGroup{
 		g:       new(big.Int).SetInt64(2),
 		p:       p,
 		pMinus1: new(big.Int).Sub(p, bigOne),
@@ -437,7 +437,7 @@ func (kp *curve25519KeyPair) generate(rand io.Reader) error {
 // wrong order.
 var curve25519Zeros [32]byte
 
-func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *handshakeMagics) (*kexResult, error) {
+func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *HandshakeMagics) (*KexResult, error) {
 	var kp curve25519KeyPair
 	if err := kp.generate(rand); err != nil {
 		return nil, err
@@ -477,7 +477,7 @@ func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *handsh
 	marshalInt(K, ki)
 	h.Write(K)
 
-	return &kexResult{
+	return &KexResult{
 		H:         h.Sum(nil),
 		K:         K,
 		HostKey:   reply.HostKey,
@@ -486,7 +486,7 @@ func (kex *curve25519sha256) Client(c packetConn, rand io.Reader, magics *handsh
 	}, nil
 }
 
-func (kex *curve25519sha256) Server(c packetConn, rand io.Reader, magics *handshakeMagics, priv Signer) (result *kexResult, err error) {
+func (kex *curve25519sha256) Server(c packetConn, rand io.Reader, magics *HandshakeMagics, priv Signer) (result *KexResult, err error) {
 	packet, err := c.readPacket()
 	if err != nil {
 		return
@@ -540,7 +540,7 @@ func (kex *curve25519sha256) Server(c packetConn, rand io.Reader, magics *handsh
 	if err := c.writePacket(Marshal(&reply)); err != nil {
 		return nil, err
 	}
-	return &kexResult{
+	return &KexResult{
 		H:         H,
 		K:         K,
 		HostKey:   hostKeyBytes,
@@ -572,7 +572,7 @@ func (gex *dhGEXSHA) diffieHellman(theirPublic, myPrivate *big.Int) (*big.Int, e
 	return new(big.Int).Exp(theirPublic, myPrivate, gex.p), nil
 }
 
-func (gex dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshakeMagics) (*kexResult, error) {
+func (gex dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *HandshakeMagics) (*KexResult, error) {
 	// Send GexRequest
 	kexDHGexRequest := kexDHGexRequestMsg{
 		MinBits:      dhGroupExchangeMinimumBits,
@@ -665,7 +665,7 @@ func (gex dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshake
 	marshalInt(K, kInt)
 	h.Write(K)
 
-	return &kexResult{
+	return &KexResult{
 		H:         h.Sum(nil),
 		K:         K,
 		HostKey:   kexDHGexReply.HostKey,
@@ -677,7 +677,7 @@ func (gex dhGEXSHA) Client(c packetConn, randSource io.Reader, magics *handshake
 // Server half implementation of the Diffie Hellman Key Exchange with SHA1 and SHA256.
 //
 // This is a minimal implementation to satisfy the automated tests.
-func (gex dhGEXSHA) Server(c packetConn, randSource io.Reader, magics *handshakeMagics, priv Signer) (result *kexResult, err error) {
+func (gex dhGEXSHA) Server(c packetConn, randSource io.Reader, magics *HandshakeMagics, priv Signer) (result *KexResult, err error) {
 	// Receive GexRequest
 	packet, err := c.readPacket()
 	if err != nil {
@@ -779,7 +779,7 @@ func (gex dhGEXSHA) Server(c packetConn, randSource io.Reader, magics *handshake
 
 	err = c.writePacket(packet)
 
-	return &kexResult{
+	return &KexResult{
 		H:         H,
 		K:         K,
 		HostKey:   hostKeyBytes,

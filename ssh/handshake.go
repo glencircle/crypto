@@ -33,7 +33,7 @@ type keyingTransport interface {
 	// prepareKeyChange sets up a key change. The key change for a
 	// direction will be effected if a msgNewKeys message is sent
 	// or received.
-	prepareKeyChange(*algorithms, *kexResult) error
+	prepareKeyChange(*algorithms, *KexResult) error
 }
 
 // handshakeTransport implements rekeying on top of a keyingTransport
@@ -534,7 +534,7 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 		return err
 	}
 
-	magics := handshakeMagics{
+	magics := HandshakeMagics{
 		clientVersion: t.clientVersion,
 		serverVersion: t.serverVersion,
 		clientKexInit: otherInitPacket,
@@ -580,7 +580,7 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 		return fmt.Errorf("ssh: unexpected key exchange algorithm %v", t.algorithms.kex)
 	}
 
-	var result *kexResult
+	var result *KexResult
 	if len(t.hostKeys) > 0 {
 		result, err = t.server(kex, t.algorithms, &magics)
 	} else {
@@ -611,7 +611,7 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 	return nil
 }
 
-func (t *handshakeTransport) server(kex kexAlgorithm, algs *algorithms, magics *handshakeMagics) (*kexResult, error) {
+func (t *handshakeTransport) server(kex KexAlgorithm, algs *algorithms, magics *HandshakeMagics) (*KexResult, error) {
 	var hostKey Signer
 	for _, k := range t.hostKeys {
 		if algs.hostKey == k.PublicKey().Type() {
@@ -623,7 +623,7 @@ func (t *handshakeTransport) server(kex kexAlgorithm, algs *algorithms, magics *
 	return r, err
 }
 
-func (t *handshakeTransport) client(kex kexAlgorithm, algs *algorithms, magics *handshakeMagics) (*kexResult, error) {
+func (t *handshakeTransport) client(kex KexAlgorithm, algs *algorithms, magics *HandshakeMagics) (*KexResult, error) {
 	result, err := kex.Client(t.conn, t.config.Rand, magics)
 	if err != nil {
 		return nil, err

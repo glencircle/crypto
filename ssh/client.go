@@ -115,7 +115,7 @@ func (c *connection) clientHandshake(dialAddress string, config *ClientConfig) e
 
 // verifyHostKeySignature verifies the host key obtained in the key
 // exchange.
-func verifyHostKeySignature(hostKey PublicKey, result *kexResult) error {
+func verifyHostKeySignature(hostKey PublicKey, result *KexResult) error {
 	sig, rest, ok := parseSignatureBody(result.Signature)
 	if len(rest) > 0 || !ok {
 		return errors.New("ssh: signature parse error")

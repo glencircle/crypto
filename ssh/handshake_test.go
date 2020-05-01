@@ -365,7 +365,7 @@ type errorKeyingTransport struct {
 	readLeft, writeLeft int
 }
 
-func (n *errorKeyingTransport) prepareKeyChange(*algorithms, *kexResult) error {
+func (n *errorKeyingTransport) prepareKeyChange(*algorithms, *KexResult) error {
 	return nil
 }
 

@@ -76,7 +76,7 @@ type connectionState struct {
 // prepareKeyChange sets up key material for a keychange. The key changes in
 // both directions are triggered by reading and writing a msgNewKey packet
 // respectively.
-func (t *transport) prepareKeyChange(algs *algorithms, kexResult *kexResult) error {
+func (t *transport) prepareKeyChange(algs *algorithms, kexResult *KexResult) error {
 	ciph, err := newPacketCipher(t.reader.dir, algs.r, kexResult)
 	if err != nil {
 		return err
@@ -236,7 +236,7 @@ var (
 // setupKeys sets the cipher and MAC keys from kex.K, kex.H and sessionId, as
 // described in RFC 4253, section 6.4. direction should either be serverKeys
 // (to setup server->client keys) or clientKeys (for client->server keys).
-func newPacketCipher(d direction, algs directionAlgorithms, kex *kexResult) (packetCipher, error) {
+func newPacketCipher(d direction, algs directionAlgorithms, kex *KexResult) (packetCipher, error) {
 	cipherMode := cipherModes[algs.Cipher]
 	macMode := macModes[algs.MAC]
 
@@ -253,7 +253,7 @@ func newPacketCipher(d direction, algs directionAlgorithms, kex *kexResult) (pac
 
 // generateKeyMaterial fills out with key material generated from tag, K, H
 // and sessionId, as specified in RFC 4253, section 7.2.
-func generateKeyMaterial(out, tag []byte, r *kexResult) {
+func generateKeyMaterial(out, tag []byte, r *KexResult) {
 	var digestsSoFar []byte
 
 	h := r.Hash.New()

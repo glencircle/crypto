@@ -19,7 +19,7 @@ import (
 // race conditions.
 func TestKexes(t *testing.T) {
 	type kexResultErr struct {
-		result *kexResult
+		result *KexResult
 		err    error
 	}
 
@@ -34,7 +34,7 @@ func TestKexes(t *testing.T) {
 
 					s := make(chan kexResultErr, 1)
 					c := make(chan kexResultErr, 1)
-					var magics handshakeMagics
+					var magics HandshakeMagics
 					go func() {
 						r, e := kex.Client(a, rand.Reader, &magics)
 						a.Close()
