@@ -1,4 +1,4 @@
-modulegithub.com/glencircle/crypto
+module github.com/glencircle/crypto
 
 go 1.11
 

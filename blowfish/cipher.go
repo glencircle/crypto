@@ -10,7 +10,7 @@
 //
 // Deprecated: any new system should use AES (from crypto/aes, if necessary in
 // an AEAD mode like crypto/cipher.NewGCM) or XChaCha20-Poly1305 (from
-//github.com/glencircle/crypto/chacha20poly1305).
+// github.com/glencircle/crypto/chacha20poly1305).
 package blowfish // import "golang.org/x/crypto/blowfish"
 
 // The code is a port of Bruce Schneier's C implementation.
